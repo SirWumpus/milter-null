@@ -366,7 +366,7 @@ filterBody(SMFICTX *ctx, unsigned char *chunk, size_t size)
 		return smfNullWorkspaceError("filterBody");
 
 	if (size == 0)
-		chunk = "";
+		chunk = (unsigned char *) "";
 	else if (size < 20)
 		chunk[--size] = '\0';
 
@@ -377,25 +377,25 @@ filterBody(SMFICTX *ctx, unsigned char *chunk, size_t size)
 	}
 
 	if (data->sent == 0) {
-		for (next = 0; 0 <= (offset = TextFind(chunk+next, "*Date: *", size-next, 1)); next += offset+1) {
+		for (next = 0; 0 <= (offset = TextFind((char *)chunk+next, "*Date: *", size-next, 1)); next += offset+1) {
 			if (isspace(chunk[next+offset-1])) {
 				offset += next;
 				break;
 			}
 		}
 
-		if (0 <= offset && 0 <= (length = TextFind(chunk + offset, "*\r*", size - offset, 0))) {
+		if (0 <= offset && 0 <= (length = TextFind((char *)chunk + offset, "*\r*", size - offset, 0))) {
 			chunk[offset+length] = '\0';
-			(void) convertDate(chunk + offset + sizeof ("Date: ")-1, &data->sent, NULL);
+			(void) convertDate((char *)chunk + offset + sizeof ("Date: ")-1, &data->sent, NULL);
 			smfLog(SMF_LOG_DEBUG, TAG_FORMAT "offset=%ld \"%s\" %lx", TAG_ARGS, offset, chunk+offset, data->sent);
 			chunk[offset+length] = '\r';
 		}
 	}
 
-	if (*data->digest_string == '\0' && 0 <= (offset = TextFind(chunk, "*Message-Id: *", size, 1))) {
+	if (*data->digest_string == '\0' && 0 <= (offset = TextFind((char *)chunk, "*Message-Id: *", size, 1))) {
 		offset += sizeof ("Message-Id: ")-1;
 
-		if ((length = TextFind(chunk + offset, "*>*", size - offset, 0)) < 0) {
+		if ((length = TextFind((char *)chunk + offset, "*>*", size - offset, 0)) < 0) {
 			smfLog(SMF_LOG_DEBUG, TAG_FORMAT "failed to find end of Message-Id:", TAG_ARGS);
 			return SMFIS_CONTINUE;
 		}
@@ -425,7 +425,7 @@ filterBody(SMFICTX *ctx, unsigned char *chunk, size_t size)
 
 	if (*data->digest_string != '\0') {
 		/* There can be multiple X-Null-Tag headers, one per relay. */
-		while (0 <= (offset = TextFind(chunk, "*X-Null-Tag: *", size, 1))) {
+		while (0 <= (offset = TextFind((char *)chunk, "*X-Null-Tag: *", size, 1))) {
 			offset += sizeof ("X-Null-Tag: ")-1;
 			chunk += offset;
 			size -= offset;
@@ -597,8 +597,6 @@ static smfInfo milter = {
 int
 main(int argc, char **argv)
 {
-	int argi;
-
 	/* Default is OFF. */
 	smfOptSmtpAuthOk.initial = "-";
 
@@ -612,7 +610,7 @@ main(int argc, char **argv)
 
 	/* Parse command line options looking for a file= option. */
 	optionInit(optTable, smfOptTable, NULL);
-	argi = optionArrayL(argc, argv, optTable, smfOptTable, NULL);
+	(void) optionArrayL(argc, argv, optTable, smfOptTable, NULL);
 
 	/* Parse the option file followed by the command line options again. */
 	if (smfOptFile.string != NULL && *smfOptFile.string != '\0') {
