@@ -41,9 +41,10 @@ dnl		AS_IF([test $GCC_MAJOR -ge 4],[CFLAGS="-Wno-pointer-sign $CFLAGS"])
 	])
 
 	if test ${platform:-UNKNOWN} = 'CYGWIN'; then
-		if test ${enable_debug:-no} = 'no'; then
-			CFLAGS="-s ${CFLAGS}"
-		fi
+		AS_IF([test ${enable_debug:-no} = 'no'],[CFLAGS="-s ${CFLAGS}"])
+		CFLAGS="-I/usr/include/w32api ${CFLAGS}"
+		LDFLAGS="-L/usr/lib/w32api ${LDFLAGS}"
+
 dnl 		if test ${enable_win32:-no} = 'yes'; then
 dnl 			dnl -s		strip, no symbols
 dnl 			dnl -mno-cygwin	native windows console app
@@ -272,7 +273,7 @@ int main()
 
 AC_DEFUN(SNERT_OPTION_DB_185,[
 	AC_ARG_ENABLE(db-185
-		[AC_HELP_STRING([[--enable-db-185 ]],[link with DB 1.85])]
+		[AS_HELP_STRING([[--enable-db-185 ]],[link with DB 1.85])]
 	)
 ])
 
@@ -302,7 +303,7 @@ AS_IF([test ${with_db:-default} != 'no'],[
 	for d in $BDB_BASE_DIRS ; do
 		if test -d "$d/include" ; then
 			bdb_dir_list="$bdb_dir_list $d"
-			bdb_i_dirs=`ls -d $d/include/db[[0-9]]* $d/include/db $d/include 2>/dev/null | sort -r`
+			bdb_i_dirs=`ls -d $d/include/db[[0-9]]* $d/include/db $d/include/. 2>/dev/null | sort -r`
 
 			for BDB_I_DIR in $bdb_i_dirs ; do
 				AC_MSG_CHECKING([for db.h in $BDB_I_DIR])
@@ -311,12 +312,12 @@ AS_IF([test ${with_db:-default} != 'no'],[
 					AC_MSG_RESULT(yes)
 					v=`basename $BDB_I_DIR`
 					if test $v = 'include' ; then
-						 v=''
+						 v='.'
 					fi
 
-					if test -d $d/lib64/$v -a $v != '.' ; then
+					if test -d $d/lib64/$v -a "$v" != '.' ; then
 						BDB_L_DIR="$d/lib64/$v"
-					elif test -d $d/lib/$v -a $v != '.'; then
+					elif test -d $d/lib/$v -a "$v" != '.'; then
 						BDB_L_DIR="$d/lib/$v"
 					elif test -d $d/lib64 ; then
 						BDB_L_DIR="$d/lib64"
@@ -475,7 +476,7 @@ main(int argc, char **argv)
 				]])
 			],[
 				libpath=[`$ldd_tool ./conftest$ac_exeext | sed -n -e "/lib$1/s/.* \([^ ]*lib$1[^ ]*\).*/\1/p"`]
-				if ./conftest$ac_exeext $libpath ; then
+				if ./conftest$ac_exeext ${libpath:-unknown} ; then
 					AS_VAR_SET([snert_lib], [${libpath}])
 				else
 					AS_VAR_SET([snert_lib], 'no')
@@ -490,45 +491,6 @@ main(int argc, char **argv)
 
 AC_DEFUN(SNERT_FIND_LIBC,[
 	SNERT_FIND_LIB([c],[AC_DEFINE_UNQUOTED(LIBC_PATH, ["$snert_find_lib_c"])], [])
-dnl 	echo
-dnl 	echo "Finding version of libc..."
-dnl 	echo
-dnl
-dnl 	AC_CHECK_HEADER([dlfcn.h], [
-dnl 		AC_DEFINE_UNQUOTED(HAVE_DLFCN_H)
-dnl 		AC_CHECK_TOOL(ldd_tool, ldd)
-dnl 		if test ${ldd_tool:-no} != 'no'	; then
-dnl 			AC_CHECK_LIB([dl],[dlopen])
-dnl 			AC_MSG_CHECKING([for libc])
-dnl 			AC_RUN_IFELSE([
-dnl 				AC_LANG_SOURCE([[
-dnl #include <stdio.h>
-dnl #include <stdlib.h>
-dnl #ifdef HAVE_DLFCN_H
-dnl # include <dlfcn.h>
-dnl #endif
-dnl
-dnl int
-dnl main(int argc, char **argv)
-dnl {
-dnl 	void *handle;
-dnl 	handle = dlopen(argv[1], RTLD_NOW);
-dnl 	return dlerror() != NULL;
-dnl }
-dnl 				]])
-dnl 			],[
-dnl 				libc=[`$ldd_tool ./conftest$ac_exeext | sed -n -e '/libc/s/.* \([^ ]*libc[^ ]*\).*/\1/p'`]
-dnl 				if ./conftest$ac_exeext $libc ; then
-dnl 					AC_DEFINE_UNQUOTED(LIBC_PATH, ["$libc"])
-dnl 				else
-dnl 					libc='not found'
-dnl 				fi
-dnl 			],[
-dnl 				libc='not found'
-dnl 			])
-dnl 			AC_MSG_RESULT($libc)
-dnl 		fi
-dnl 	])
 ])
 
 
@@ -616,13 +578,17 @@ AC_DEFUN(SNERT_LIBMILTER,[
 	saved_ldflags="$LDFLAGS"
 
 if test ${with_milter:-default} != 'no' ; then
-	for d in "$with_milter" /usr/local /usr/pkg ; do
+	for d in "$with_milter" /usr /usr/local /usr/pkg ; do
 		unset ac_cv_search_smfi_main
 		unset ac_cv_header_libmilter_mfapi_h
 
 		if test X$d != X ; then
 			CFLAGS_MILTER="-I$d/include"
-			LDFLAGS_MILTER="-L$d/lib"
+			if test -d $d/lib/libmilter ; then
+				LDFLAGS_MILTER="-L$d/lib/libmilter"
+			else
+				LDFLAGS_MILTER="-L$d/lib"
+			fi
 		fi
 		echo "trying with $LDFLAGS_MILTER ..."
 
@@ -687,23 +653,19 @@ AC_DEFUN(SNERT_OPTION_ENABLE_DEBUG,[
 	dnl annoying when you want the default to no debugging.
 	CFLAGS="${CFLAGS}"
 
-	AC_ARG_ENABLE(debug,
-		[AC_HELP_STRING([--enable-debug ],[enable compiler debug option])],
-		[
-			if test ${enable_debug:-no} = 'yes' ; then
-				AC_DEFINE_UNQUOTED(LIBSNERT_DEBUG)
-				enable_debug='yes'
-			fi
-		],[
-			AC_DEFINE_UNQUOTED(NDEBUG)
-			enable_debug='no'
-		]
-	)
+	AC_ARG_ENABLE(debug,[AS_HELP_STRING([--enable-debug],[enable compiler debug option])])
+	AS_IF([test ${enable_debug:-no} = 'yes'],[
+		CFLAGS="-g -O0${CFLAGS:+ $CFLAGS}"
+	],[
+		AC_DEFINE(NDEBUG,[1],[Disable debug code])
+		CFLAGS="-Os${CFLAGS:+ $CFLAGS}"
+		enable_debug='no'
+	])
 ])
 
 AC_DEFUN(SNERT_OPTION_ENABLE_64BIT,[
 	AC_ARG_ENABLE(64bit,
-		[AC_HELP_STRING([--enable-64bit ],[enable compile & link options for 64-bit])],
+		[AS_HELP_STRING([--enable-64bit ],[enable compile & link options for 64-bit])],
 		[
 			CFLAGS="-m64 ${CFLAGS}"
 			LDFLAGS="-m64 ${LDFLAGS}"
@@ -728,7 +690,7 @@ dnl SNERT_OPTION_ENABLE_WIN32
 dnl
 AC_DEFUN(SNERT_OPTION_ENABLE_MINGW,[
 	AC_ARG_ENABLE(mingw,
-		[AC_HELP_STRING([--enable-mingw ],[generate native Windows application using mingw])],
+		[AS_HELP_STRING([--enable-mingw ],[generate native Windows application using mingw])],
 		[
 			enable_win32='yes'
 			AC_SUBST(ENABLE_MINGW, 'yes')
@@ -743,7 +705,7 @@ dnl SNERT_OPTION_WITH_WINDOWS_SDK
 dnl
 AC_DEFUN(SNERT_OPTION_WITH_WINDOWS_SDK,[
 	AC_ARG_WITH(windows-sdk,
-		[AC_HELP_STRING([--with-windows-sdk=dir ],[Windows Platform SDK base directory])],
+		[AS_HELP_STRING([--with-windows-sdk=dir ],[Windows Platform SDK base directory])],
 		[
 			enable_win32='yes'
 			AC_SUBST(WITH_WINDOWS_SDK, $with_windows_sdk)
@@ -759,7 +721,7 @@ dnl SNERT_OPTION_ENABLE_BCC32
 dnl
 AC_DEFUN(SNERT_OPTION_ENABLE_BCC32,[
 	AC_ARG_ENABLE(bcc32,
-		[AC_HELP_STRING([--enable-bcc32 ],[generate native Windows application using Borland C++ 5.5])],
+		[AS_HELP_STRING([--enable-bcc32 ],[generate native Windows application using Borland C++ 5.5])],
 		[
 			enable_bcc32='yes'
 			CC=bcc32
@@ -772,7 +734,7 @@ dnl SNERT_OPTION_ENABLE_RUN_USER(default_user_name)
 dnl
 AC_DEFUN(SNERT_OPTION_ENABLE_RUN_USER,[
 	AC_ARG_ENABLE(run-user,
-		[AC_HELP_STRING([--enable-run-user=user ],[specifiy the process user name, default is "$1"])],
+		[AS_HELP_STRING([--enable-run-user=user ],[specifiy the process user name, default is "$1"])],
 		[enable_run_user="$enableval"], [enable_run_user=$1]
 	)
 	AC_DEFINE_UNQUOTED(RUN_AS_USER, ["$enable_run_user"])
@@ -784,7 +746,7 @@ dnl SNERT_OPTION_ENABLE_RUN_GROUP(default_group_name)
 dnl
 AC_DEFUN(SNERT_OPTION_ENABLE_RUN_GROUP,[
 	AC_ARG_ENABLE(run-group,
-		[AC_HELP_STRING([--enable-run-group=group ],[specifiy the process group name, default is "$1"])],
+		[AS_HELP_STRING([--enable-run-group=group ],[specifiy the process group name, default is "$1"])],
 		[enable_run_group="$enableval"], [enable_run_group=$1]
 	)
 	AC_DEFINE_UNQUOTED(RUN_AS_GROUP, ["$enable_run_group"])
@@ -796,7 +758,7 @@ dnl SNERT_OPTION_ENABLE_CACHE_TYPE(default_cache_type)
 dnl
 AC_DEFUN(SNERT_OPTION_ENABLE_CACHE_TYPE,[
 	AC_ARG_ENABLE(cache-type,
-		[AC_HELP_STRING([--enable-cache-type=type ],[specifiy the cache type: bdb, flatfile, hash])],
+		[AS_HELP_STRING([--enable-cache-type=type ],[specifiy the cache type: bdb, flatfile, hash])],
 		[
 			# Force a specific type.
 			case "$enableval" in
@@ -819,7 +781,7 @@ dnl SNERT_OPTION_ENABLE_CACHE_FILE
 dnl
 AC_DEFUN(SNERT_OPTION_ENABLE_CACHE_FILE,[
 	AC_ARG_ENABLE(cache-file,
-		[AC_HELP_STRING([--enable-cache-file=filepath ],[specifiy the cache file])],
+		[AS_HELP_STRING([--enable-cache-file=filepath ],[specifiy the cache file])],
 		[
 			enable_cache_file="$enableval"
 		], [
@@ -847,7 +809,7 @@ dnl SNERT_OPTION_ENABLE_PID(default)
 dnl
 AC_DEFUN(SNERT_OPTION_ENABLE_PID,[
 	AC_ARG_ENABLE(pid,
-		[AC_HELP_STRING([--enable-pid=filepath ],[specifiy an alternative pid file path])],
+		[AS_HELP_STRING([--enable-pid=filepath ],[specifiy an alternative pid file path])],
 		[
 		],[
 			dnl Almost all unix machines agree on this location.
@@ -869,7 +831,7 @@ dnl SNERT_OPTION_ENABLE_SOCKET(default)
 dnl
 AC_DEFUN(SNERT_OPTION_ENABLE_SOCKET,[
 	AC_ARG_ENABLE(socket,
-		[AC_HELP_STRING([--enable-socket=filepath ],[specifiy an alternative Unix domain socket])],
+		[AS_HELP_STRING([--enable-socket=filepath ],[specifiy an alternative Unix domain socket])],
 		[
 		],[
 			dnl Almost all unix machines agree on this location.
@@ -894,7 +856,7 @@ dnl SNERT_OPTION_ENABLE_POPAUTH
 dnl
 AC_DEFUN(SNERT_OPTION_ENABLE_POPAUTH,[
 	AC_ARG_ENABLE(popauth,
-		[AC_HELP_STRING([--enable-popauth ],[enable POP-before-SMTP macro checking in smf API])],
+		[AS_HELP_STRING([--enable-popauth ],[enable POP-before-SMTP macro checking in smf API])],
 		[AC_DEFINE_UNQUOTED(HAVE_POP_BEFORE_SMTP)]
 	)
 ])
@@ -904,7 +866,7 @@ dnl SNERT_OPTION_ENABLE_STARTUP_DIR
 dnl
 AC_DEFUN(SNERT_OPTION_ENABLE_STARTUP_DIR,[
 	AC_ARG_ENABLE(startup-dir,
-		[AC_HELP_STRING([--enable-startup-dir=dir ],[specifiy the startup script directory location])],
+		[AS_HELP_STRING([--enable-startup-dir=dir ],[specifiy the startup script directory location])],
 		[
 			STARTUP_DIR="$enableval"
 			STARTUP_EXT='.sh'
@@ -936,7 +898,7 @@ dnl SNERT_OPTION_WITH_SENDMAIL
 dnl
 AC_DEFUN(SNERT_OPTION_WITH_SENDMAIL,[
 	AC_ARG_WITH(sendmail,
-		[AC_HELP_STRING([--with-sendmail=dir ],[directory where sendmail.cf lives, default /etc/mail])],
+		[AS_HELP_STRING([--with-sendmail=dir ],[directory where sendmail.cf lives, default /etc/mail])],
 		[with_sendmail="$withval"], [with_sendmail='/etc/mail']
 	)
 	AC_SUBST(with_sendmail)
@@ -947,7 +909,7 @@ dnl SNERT_OPTION_ENABLE_FORK
 dnl
 AC_DEFUN(SNERT_OPTION_ENABLE_FORK,[
 	AC_ARG_ENABLE(
-		fork, [AC_HELP_STRING([--enable-fork],[use process fork model instead of threads])],
+		fork, [AS_HELP_STRING([--enable-fork],[use process fork model instead of threads])],
 		[
 			AC_DEFINE_UNQUOTED(ENABLE_FORK)
 		]
@@ -977,7 +939,7 @@ dnl SNERT_OPTION_ENABLE_FCNTL_LOCKS
 dnl
 AC_DEFUN(SNERT_OPTION_ENABLE_FCNTL_LOCKS,[
 	AC_ARG_ENABLE(fcntl-locks,
-		[AC_HELP_STRING([--enable-fcntl-locks],[use fcntl() file locking instead of flock()])],
+		[AS_HELP_STRING([--enable-fcntl-locks],[use fcntl() file locking instead of flock()])],
 		[
 		],[
 			dnl Option not specified, choose based on OS.
@@ -1200,6 +1162,7 @@ else
 		AC_CHECK_FUNCS([pthread_mutex_init pthread_mutex_destroy pthread_mutex_lock pthread_mutex_trylock pthread_mutex_unlock])
 		AC_CHECK_FUNCS([pthread_mutexattr_init pthread_mutexattr_destroy pthread_mutexattr_setprioceiling pthread_mutexattr_getprioceiling pthread_mutexattr_setprotocol pthread_mutexattr_getprotocol pthread_mutexattr_settype pthread_mutexattr_gettype])
 		AC_CHECK_FUNCS([pthread_cond_broadcast pthread_cond_destroy pthread_cond_init pthread_cond_signal pthread_cond_timedwait pthread_cond_wait])
+		AC_CHECK_FUNCS([pthread_spin_init pthread_spin_destroy pthread_spin_lock pthread_spin_trylock pthread_spin_unlock])
 		AC_CHECK_FUNCS([pthread_rwlock_init pthread_rwlock_destroy pthread_rwlock_unlock pthread_rwlock_rdlock pthread_rwlock_wrlock pthread_rwlock_tryrdlock pthread_rwlock_trywrlock])
 		AC_CHECK_FUNCS([pthread_lock_global_np pthread_unlock_global_np])
 		AC_CHECK_FUNCS([pthread_key_create pthread_key_delete pthread_getspecific pthread_setspecific])
@@ -1418,6 +1381,16 @@ dnl	LIBS=$saved_libs
 ])
 
 dnl
+dnl SNERT_EXTRA_STDIO
+dnl
+AC_DEFUN(SNERT_EXTRA_STDIO,[
+	echo
+	echo "Check for supplemental stdio support..."
+	echo
+	AC_CHECK_FUNCS(getdelim getline)
+])
+
+dnl
 dnl SNERT_EXTRA_STRING
 dnl
 AC_DEFUN(SNERT_EXTRA_STRING,[
@@ -1440,6 +1413,16 @@ AC_DEFUN(SNERT_REGEX,[
 		AC_SEARCH_LIBS([regcomp], [regex])
 		AC_CHECK_FUNCS(regcomp regexec regerror regfree)
 	])
+])
+
+dnl
+dnl SNERT_HASHES
+dnl
+AC_DEFUN(SNERT_HASHES,[
+	echo
+	echo "Check for common hashes..."
+	echo
+	AC_CHECK_HEADERS([md4.h md5.h rmd160.h sha1.h sha2.h],[],[],[/* */])
 ])
 
 dnl
@@ -1752,8 +1735,8 @@ AC_DEFUN(SNERT_BUILD_THREADED_SQLITE3,[
 				)
 				AS_IF([test ${platform} != 'Darwin'],[sqlite3_configure_options="${sqlite3_configure_options} --enable-static --disable-shared"])
 
-				echo CFLAGS="'${sqlite3_cflags} ${CFLAGS} ${CFLAGS_PTHREAD}'" LDFLAGS="'${LDFLAGS} ${LDFLAGS_PTHREAD}'" ./configure  ${sqlite3_configure_options}
-				CFLAGS="${sqlite3_cflags} ${CFLAGS} ${CFLAGS_PTHREAD}" LDFLAGS="${LDFLAGS} ${LDFLAGS_PTHREAD}" ./configure  ${sqlite3_configure_options}
+				echo ./configure CFLAGS="'${sqlite3_cflags}'" ${sqlite3_configure_options}
+				./configure CFLAGS="${sqlite3_cflags}" ${sqlite3_configure_options}
 				echo
 			fi
 			echo
@@ -1838,6 +1821,11 @@ dnl #endif
 				getifaddrs freeifaddrs
 			])
 		])
+		AC_CHECK_HEADERS([net/if.h],[
+			AC_CHECK_FUNCS([ \
+				if_nameindex if_freenameindex if_nametoindex if_indextoname
+			])
+		])
 	else
 		AC_CHECK_HEADERS(windows.h io.h)
 		AC_CHECK_HEADER(winsock2.h,[
@@ -1897,6 +1885,9 @@ dnl #endif
 			AC_DEFINE_UNQUOTED(AS_TR_CPP([HAVE_]$i))
 			AC_MSG_RESULT([assumed in winsock2.h & ws2tcpip.h])
 		done
+	fi
+
+	if test ${platform:-UNKNOWN} = 'CYGWIN' -o ${ac_cv_define___WIN32__:-no} != 'no'; then
 		AC_SUBST(HAVE_LIB_WS2_32, '-lws2_32')
 		AC_SUBST(HAVE_LIB_IPHLPAPI, '-lIphlpapi')
 		NETWORK_LIBS="-lws2_32 -lIphlpapi $NETWORK_LIBS"

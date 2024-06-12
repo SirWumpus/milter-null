@@ -12,7 +12,7 @@ dnl The autoconf version I learned to deal with.
 AC_PREREQ(2.59)
 
 dnl Yes I wrote this mess.
-SNERT_INIT(MILTER, [Copyright 2006, 2012 by Anthony Howe. All rights reserved.])
+SNERT_INIT(MILTER, [Copyright 2006, 2024 by Anthony Howe. All rights reserved.])
 
 AC_SUBST(snert_milter_t_equate, 'C:30s;E:30s')
 
@@ -44,6 +44,7 @@ AC_CONFIG_FILES(makefile)
 
 SNERT_OPTION_ENABLE_CACHE_FILE
 SNERT_OPTION_ENABLE_CACHE_TYPE(default)
+SNERT_OPTION_ENABLE_DEBUG
 SNERT_OPTION_ENABLE_RUN_USER(milter)
 SNERT_OPTION_ENABLE_RUN_GROUP(milter)
 SNERT_OPTION_ENABLE_PID('${localstatedir}/run/milter/${PACKAGE_NAME}.pid')
@@ -78,8 +79,14 @@ if test -f '../lib/version.sh' ; then
 	AC_SUBST(MD5SUM)
 	AC_SUBST(TAR_I)
 
-	AC_SUBST(HAVE_LIB_RT)
+	AC_SUBST(LIBS_RT)
 	AC_SUBST(HAVE_LIB_SEM)
+	AC_SUBST(NETWORK_LIBS)
+
+	AC_SUBST(CFLAGS_SNERT)
+	AC_SUBST(CPPFLAGS_SNERT)
+	AC_SUBST(LDFLAGS_SNERT)
+	AC_SUBST(LIBS_SNERT)
 
 	AC_SUBST(CFLAGS_DB)
 	AC_SUBST(LDFLAGS_DB)
@@ -87,11 +94,11 @@ if test -f '../lib/version.sh' ; then
 
 	AC_SUBST(CFLAGS_MILTER)
 	AC_SUBST(LDFLAGS_MILTER)
-	AC_SUBST(HAVE_LIB_MILTER)
+	AC_SUBST(LIBS_MILTER)
 
 	AC_SUBST(CFLAGS_SQLITE3)
 	AC_SUBST(LDFLAGS_SQLITE3)
-	AC_SUBST(HAVE_LIB_SQLITE3)
+	AC_SUBST(LIBS_SQLITE3)
 
 	AC_SUBST(CFLAGS_PTHREAD)
 	AC_SUBST(LDFLAGS_PTHREAD)
@@ -115,8 +122,6 @@ if test -f '../lib/version.sh' ; then
 		echo
 		exit 1
 	fi
-
-	LIBS="${LIBS} ${HAVE_LIB_MILTER} ${HAVE_LIB_DB} ${HAVE_LIB_SQLITE3} ${HAVE_LIB_RT} ${HAVE_LIB_PTHREAD}"
 else
 	snert_libsnert=no
 	echo
