@@ -52,7 +52,7 @@ The type and location of the read-only access key-value map.  It provides a cent
         socketmap!host:port                     Sendmail style socket-map
         socketmap!/path/local/socket            Sendmail style socket-map
         socketmap!123.45.67.89:port             Sendmail style socket-map
-        socketmap!\[2001:0DB8::1234\]:port      Sendmail style socket-map
+        socketmap![2001:0DB8::1234]:port        Sendmail style socket-map
 
 If `:port` is omitted, the default is `7953`.
 
@@ -79,8 +79,8 @@ An IPv6 lookup is repeated several times reducing the IP address by one 16-bit w
 
 A domain lookup is repeated several times reducing the domain by one label from left to right until a match is found.
 
-        tag:\[ipv6:2001:0DB8::1234:5678\]
-        tag:\[192.0.2.9\]
+        tag:[ipv6:2001:0DB8::1234:5678]
+        tag:[192.0.2.9]
         tag:sub.domain.tld
         tag:domain.tld
         tag:tld
@@ -95,7 +95,7 @@ An email lookup is similar to a domain lookup, the exact address is first tried,
         tag:account@
         tag:
 
-If a key is found and is a milter specific tag (ie. milter-null-Connect, milter-null-To), then the value is processed as a pattern list and the result returned.  The Sendmail variants cannot have a pattern list.  A pattern list is a whitespace separated list of _pattern-action_ pairs followed by an optional default _action_.  The supported patterns are:
+If a key is found and is a milter specific tag (ie. `milter-null-Connect`, `milter-null-To`), then the value is processed as a pattern list and the result returned.  The Sendmail variants cannot have a pattern list.  A pattern list is a whitespace separated list of _pattern-action_ pairs followed by an optional default _action_.  The supported patterns are:
 
         [network/cidr]action            Classless Inter-Domain Routing
         !pattern!action                 Simple fast text matching.
@@ -103,15 +103,15 @@ If a key is found and is a milter specific tag (ie. milter-null-Connect, milter-
 
 The CIDR will only ever match for IP address related lookups.
 
-A !pattern! uses an astrisk (\*) for a wildcard, scanning over zero or more characters; a question-mark (?) matches any single character; a backslash followed by any character treats it as a literal (it loses any special meaning).
+A `!pattern!` uses an astrisk (\*) for a wildcard, scanning over zero or more characters; a question-mark (?) matches any single character; a backslash followed by any character treats it as a literal (it loses any special meaning).
 
-!abc!           exact match for 'abc'
-!abc*!          match 'abc' at start of string
-!*abc!          match 'abc' at the end of string
-!abc*def!       match 'abc' at the start and match 'def' at the end, maybe with stuff in between.
-!*abc*def*!     find 'abc', then find 'def'
+        !abc!           exact match for 'abc'
+        !abc*!          match 'abc' at start of string
+        !*abc!          match 'abc' at the end of string
+        !abc*def!       match 'abc' at the start and match 'def' at the end, maybe with stuff in between.
+        !*abc*def*!     find 'abc', then find 'def'
 
-For black-white lookups, the following actions are recognised: `OK` or `RELAY` (allow), `REJECT` or `ERROR` (deny), DISCARD (accept & discard), `SKIP` or `DUNNO` (stop lookup, no result), and `NEXT` (opposite of SKIP, resume lookup).  Its possible to specify an empty action after a pattern, which is treated like `SKIP` returning an undefined result.  Other options may specify other actions.
+For black-white lookups, the following actions are recognised: `OK` or `RELAY` (allow), `REJECT` or `ERROR` (deny), `DISCARD` (accept & discard), `SKIP` or `DUNNO` (stop lookup, no result), and `NEXT` (opposite of `SKIP`, resume lookup).  Its possible to specify an empty action after a pattern, which is treated like `SKIP` returning an undefined result.  Other options may specify other actions.
 
 Below is a list of supported tags. Other options may specify additional tags.
 
@@ -119,24 +119,23 @@ Below is a list of supported tags. Other options may specify additional tags.
         Connect:client-ip  value
         client-ip  value
 
-        4
-        milter-null-To:_recipient-address_      value         § Can be a pattern list.
-        milter-null-To:_recipient-domain_       value         § Can be a pattern list.
-        milter-null-To:_recipient@_             value         § Can be a pattern list.
+        milter-null-To:recipient-address        value         § Can be a pattern list.
+        milter-null-To:recipient-domain         value         § Can be a pattern list.
+        milter-null-To:recipient@               value         § Can be a pattern list.
         milter-null-To:                         value         § Can be a pattern list.
-        Spam:_recipient-address_                value         (FRIEND or HATER are recognised)
-        Spam:_recipient-domain_                 value         (FRIEND or HATER are recognised)
-        Spam:_recipient@_                       value         (FRIEND or HATER are recognised)
-        To:_recipient-address_                  value
-        To:_recipient-domain_                   value
-        To:_recipient@_                         value
-        _recipient-address_                     value
-        _recipient-domain_                      value
-        _recipient@_                            value
+        Spam:recipient-address                  value         (FRIEND or HATER are recognised)
+        Spam:recipient-domain                   value         (FRIEND or HATER are recognised)
+        Spam:recipient@                         value         (FRIEND or HATER are recognised)
+        To:recipient-address                    value
+        To:recipient-domain                     value
+        To:recipient@                           value
+        recipient-address                       value
+        recipient-domain                        value
+        recipient@                              value
 
-All mail to the _recipient-address_, _recipient-domain_, or that begins with _recipient_ is black or white-listed. In the case of a +detailed email address, the left hand side of the +detail is used for the _recipient@_ lookup. Note that Sendmail also has special semantics for Spam:, To:, and untagged forms.
+All mail to the _recipient-address_, _recipient-domain_, or that begins with _recipient_ is black or white-listed. In the case of a _+detailed_ email address, the left hand side of the _+detail_ is used for the _recipient@_ lookup. Note that Sendmail also has special semantics for `Spam:`, `To:`, and untagged forms.
 
-The milter-null-Connect: and milter-null-To: tags provide a milter specific means to override the Sendmail variants. For example, you normally white list your local network through any and all milters, but on the odd occasion you might want to actually scan mail from inside going out, without removing the Connect: tag that allows Sendmail to relay for your network or white listing for other milters. So for example if you have Sendmail tags like:
+The `milter-null-Connect:` and `milter-null-To:` tags provide a milter specific means to override the Sendmail variants. For example, you normally white list your local network through any and all milters, but on the odd occasion you might want to actually scan mail from inside going out, without removing the `Connect:` tag that allows Sendmail to relay for your network or white listing for other milters. So for example if you have Sendmail tags like:
 
         To:mx.example.com               RELAY
 
@@ -163,12 +162,12 @@ Accept mail to <john@example.com> and <fred@example.com> when fred's address con
 
 Reject mail to example.net using a plus-detail address or to any user who's last name is "smith" or addresses starting with a digit. No default given, so B/W processing would continue.
 
-Normally when the access.db lookup matches a milter tag, then the _value_ pattern list is processed and there are no further access.db lookups. The NEXT action allows the access.db lookups to resume and is effectively the opposite of SKIP. Consider the following examples:
+Normally when the _access.db_ lookup matches a milter tag, then the _value_ pattern list is processed and there are no further _access.db_ lookups. The `NEXT` action allows the _access.db_ lookups to resume and is effectively the opposite of `SKIP`. Consider the following examples:
 
         milter-null-To:com              /@com/REJECT  NEXT
         To:com                          OK
 
-Reject mail to places like compaq.com or com.com if the pattern matches, but resume the access.db lookups otherwise.
+Reject mail to places like _compaq.com_ or _com.com_ if the pattern matches, but resume the _access.db_ lookups otherwise.
 
         milter-null-To:aol.com          /^[a-zA-Z0-9!#$&'*+=?^_`{|}~.-]{3,16}@aol.com$/NEXT REJECT
         To:fred@aol.com                 OK
@@ -307,14 +306,13 @@ This is the list of possible SMTP responses.
   See `date-ttl=` option.
 
 * 550 5.7.1 DSN or MDN for message that did not originate here  
-  The DSN or MDN did not specify the original message's Date:, Message-ID:, and `X-Null-Tag:` headers or the `X-Null-Tag:` header did not match the computed hash value. See `secret=` option.
+  The DSN or MDN did not specify the original message's `Date:`, `Message-ID:`, and `X-Null-Tag:` headers or the `X-Null-Tag:` header did not match the computed hash value. See `secret=` option.
 
 
 Build & Install
 ---------------
 
-* Install `SQLite` from a package if desired.  Prior to [LibSnert's](https://github.com/SirWumpus/libsnert) availability on GitHub, the old `libsnert` tarballs included SQLite, but the GitHub `libsnert` repository does not, so it needs to be installed separately.  
-`milter-null` does not require it, but other milters that need a cache will.
+* Install `SQLite` from a package if desired.  Prior to [LibSnert's](https://github.com/SirWumpus/libsnert) availability on GitHub, the old `libsnert` tarballs included SQLite, but the GitHub `libsnert` repository does not, so it needs to be installed separately.   `milter-null` does not require it, but other milters that need a cache will.
 
 * If you have never built a milter for Sendmail, then please make sure that you build and install `libmilter` (or install a pre-built package), which is _not_ built by default when you build Sendmail.  Please read the `libmilter` documentation.  Briefly, it should be something like this:
     
@@ -341,13 +339,12 @@ Build & Install
 Notes
 -----
 
-* The minimum desired file ownership and permissions are as follows for a typical Linux system.  For FreeBSD, NetBSD, and OpenBSD the binary and cache locations may differ, but have the same permissions.  Process user `milter` is primary member of group `milter` and secondary member of group `smmsp`.  Note that the milter should be started as root, so that it can create a .pid file and .socket file in `/var/run`; after which it will switch process ownership to `milter:milter` before starting the accept socket thread.
+* The minimum desired file ownership and permissions are as follows for a typical Linux system.  For FreeBSD, NetBSD, and OpenBSD the binary and cache locations may differ, but have the same permissions.  Process user `milter` is primary member of group `milter` and secondary member of group `smmsp`.  Note that the milter should be started as `root`, so that it can create a _.pid file_ and _.socket file_ in `/var/run`; after which it will switch process ownership to `milter:milter` before starting the accept socket thread.
 
         /etc/mail/                              root:smmsp      0750 drwxr-x---
         /etc/mail/access.db                     root:smmsp      0640 -rw-r-----
         /etc/mail/sendmail.cf                   root:smmsp      0640 -rw-r-----
         /etc/mail/milter-null.cf                root:root       0644 -rw-r--r--
-        /var/run/p0f.socket                     ?:?             0644 srw-rw-rw-
         /var/run/milter/milter-null.pid         milter:milter   0644 -rw-r--r--
         /var/run/milter/milter-null.socket      milter:milter   0644 srw-r--r--
         /var/db/milter-null                     milter:milter   0644 -rw-r--r-- (*BSD)
