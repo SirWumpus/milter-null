@@ -215,7 +215,9 @@ The sendmail/milter I/O timeout in seconds.
 
 When the sender is `MAIL FROM:<>`, then there can only be one `RCPT TO:` specified since the null address is only used to return a Delivery Status Notification or Message Disposition Notification to the original sender and its not possible to have two or more sender's for one message (in theory).
 
-        pid-file=/var/run/milter/milter-null.pid
+
+- - -
+### pid-file=/var/run/milter/milter-null.pid
 
 The file path of where to save the process-id.
 
@@ -227,7 +229,9 @@ Policy to apply when a DSN or MDN does not reference a message that originated h
 - - -
 ### -quit or +quit
 
-Quit an already running instance of the milter and exit.  This is equivalent to: `` kill -QUIT `cat /var/run/milter/milter-null.pid` ``
+Quit an already running instance of the milter and exit.  This is equivalent to: 
+
+        kill -QUIT `cat /var/run/milter/milter-null.pid`.
 
 - - -
 ### -restart or +restart
