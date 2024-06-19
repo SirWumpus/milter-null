@@ -113,27 +113,30 @@ A `!pattern!` uses an astrisk (\*) for a wildcard, scanning over zero or more ch
 
 For black-white lookups, the following actions are recognised: `OK` or `RELAY` (allow), `REJECT` or `ERROR` (deny), `DISCARD` (accept & discard), `SKIP` or `DUNNO` (stop lookup, no result), and `NEXT` (opposite of `SKIP`, resume lookup).  Its possible to specify an empty action after a pattern, which is treated like `SKIP` returning an undefined result.  Other options may specify other actions.
 
-Below is a list of supported tags. Other options may specify additional tags.
+Below is a list of supported tags.  Other options may specify additional tags.
 
-        milter-null-Connect:client-ip           value         § Can be a pattern list.
-        Connect:client-ip  value
-        client-ip  value
+        milter-spiff-Connect:client-ip          value           § Can be a pattern list.
+        milter-spiff-Connect:[client-ip]        value           § Can be a pattern list.
+        milter-spiff-Connect:client-domain      value           § Can be a pattern list.
+        milter-spiff-Connect:                   value           § Can be a pattern list.
+        Connect:client-ip                       value
+        Connect:[client-ip]                     value
+        Connect:client-domain                   value
 
-        milter-null-To:recipient-address        value         § Can be a pattern list.
-        milter-null-To:recipient-domain         value         § Can be a pattern list.
-        milter-null-To:recipient@               value         § Can be a pattern list.
-        milter-null-To:                         value         § Can be a pattern list.
-        Spam:recipient-address                  value         (FRIEND or HATER are recognised)
-        Spam:recipient-domain                   value         (FRIEND or HATER are recognised)
-        Spam:recipient@                         value         (FRIEND or HATER are recognised)
+All mail sent by a connecting _client-ip_, unresolved _client-ip_ address or IP addresses that resolve to a _client-domain_ are black or white-listed.  These allows you to white-list your network for mail sent internally and off-site, or connections from outside networks.  *Note that Sendmail also has special semantics for `Connect:` and untagged forms.*
+
+        milter-spiff-To:recipient-address       value           § Can be a pattern list.
+        milter-spiff-To:recipient-domain        value           § Can be a pattern list.
+        milter-spiff-To:recipient@              value           § Can be a pattern list.
+        milter-spiff-To:                        value           § Can be a pattern list.
+        Spam:recipient-address                  value           (FRIEND or HATER are recognised)
+        Spam:recipient-domain                   value           (FRIEND or HATER are recognised)
+        Spam:recipient@                         value           (FRIEND or HATER are recognised)
         To:recipient-address                    value
         To:recipient-domain                     value
         To:recipient@                           value
-        recipient-address                       value
-        recipient-domain                        value
-        recipient@                              value
 
-All mail to the _recipient-address_, _recipient-domain_, or that begins with _recipient_ is black or white-listed. In the case of a _+detailed_ email address, the left hand side of the _+detail_ is used for the _recipient@_ lookup. Note that Sendmail also has special semantics for `Spam:`, `To:`, and untagged forms.
+All mail to the _recipient-address_, _recipient-domain_, or that begins with _recipient_ is black or white-listed.  In the case of a _+detailed_ email address, the left hand side of the _+detail_ is used for the _recipient@_ lookup.  *Note that Sendmail also has special semantics for `Spam:`, `To:`, and untagged forms.*
 
 The `milter-null-Connect:` and `milter-null-To:` tags provide a milter specific means to override the Sendmail variants. For example, you normally white list your local network through any and all milters, but on the odd occasion you might want to actually scan mail from inside going out, without removing the `Connect:` tag that allows Sendmail to relay for your network or white listing for other milters. So for example if you have Sendmail tags like:
 
