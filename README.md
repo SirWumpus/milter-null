@@ -30,7 +30,7 @@ Usage
 
         milter-null [options ...] [arguments ...]
 
-Options can be expressed in four different ways.  Boolean options are expressed as `+option` or `-option` to turn the option on or off respectively.  Options that required a value are expressed as option=value or option+=value for appending to a value list.  Note that the `+option` and `-option` syntax are equivalent to `option=1` and `option=0` respectively.  Option names are case insensitive.
+Options can be expressed in four different ways.  Boolean options are expressed as `+option` or `-option` to turn the option on or off respectively.  Options that required a value are expressed as `option=value` or `option+=value` for appending to a value list.  Note that the `+option` and `-option` syntax are equivalent to `option=1` and `option=0` respectively.  Option names are case insensitive.
 
 Some options, like `+help` or `-help`, are treated as immediate actions or commands.  Unknown options are ignored.  The first command-line argument is that which does not adhere to the above option syntax.  The special command-line argument `--` can be used to explicitly signal an end to the list of options.
 
@@ -183,7 +183,7 @@ Start as a background daemon or foreground application.
 - - -
 ### date-ttl=604800
 
-`Date:` header time-to-live in seconds. DSN or MDN messages containing Date: headers older than this value are rejected.
+`Date:` header time-to-live in seconds. DSN or MDN messages containing `Date:` headers older than this value are rejected.
 
 - - -
 ### file=/etc/mail/milter-null.cf
