@@ -333,6 +333,7 @@ Build & Install
         cd com/snert/src
         git clone https://github.com/SirWumpus/milter-null.git
         cd milter-null
+        autoconf -f             # If ./configure is missing or out of date.
         ./configure --help
         ./configure
         make
